@@ -1,150 +1,256 @@
 <!DOCTYPE html>
-<html lang="de" class="dark">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Qibla Kompass</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Qibla Compass">
+    <meta name="theme-color" content="#080b11">
+    <meta name="description" content="Precise Qibla compass for prayer direction using GPS and device orientation">
+    <link rel="manifest" href="data:application/json,{%22name%22:%22Qibla%20Compass%22,%22short_name%22:%22Qibla%22,%22start_url%22:%22/%22,%22display%22:%22fullscreen%22,%22background_color%22:%22%23080b11%22,%22theme_color%22:%22%2310b981%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 192 192%27%3E%3Crect fill=%27%23080b11%27 width=%27192%27 height=%27192%27/%3E%3Ccircle cx=%2796%27 cy=%2796%27 r=%2785%27 fill=%27none%27 stroke=%27%2310b981%27 stroke-width=%272%27/%3E%3Cpolygon points=%2796,30 110,85 82,85%27 fill=%27%2310b981%27/%3E%3C/svg%3E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22}]}">
+    <title>Qibla Compass</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        * { -webkit-touch-callout: none; }
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #0b0f19;
+            background: radial-gradient(circle at top, #11213e 0%, #091522 32%, #050b14 100%);
             color: #f8fafc;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
         }
-        .dial-rotate {
-            transition: transform 0.1s cubic-bezier(0.1, 0.7, 0.1, 1);
+        .compass-dial {
+            transition: transform 0.06s cubic-bezier(0.1, 0.7, 0.1, 1);
+        }
+        .pulse-subtle {
+            animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .compass-container {
+            background: radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.14), rgba(59, 130, 246, 0) 48%), radial-gradient(circle at center, #12233f, #0b1220 65%, #070d16);
+            box-shadow: 0 0 70px rgba(59, 130, 246, 0.18), inset 0 0 35px rgba(96, 165, 250, 0.08);
+        }
+        .qibla-marker {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 15;
+            padding-top: 8px;
+        }
+        .qibla-marker-icon {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 50% 75%, 18% 100%, 0% 38%);
+            filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6)) drop-shadow(0 0 3px rgba(16, 185, 129, 0.8));
+            animation: qibla-pulse 2s ease-in-out infinite;
+        }
+        @keyframes qibla-pulse {
+            0%, 100% { filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6)) drop-shadow(0 0 3px rgba(16, 185, 129, 0.8)); }
+            50% { filter: drop-shadow(0 0 16px rgba(16, 185, 129, 0.9)) drop-shadow(0 0 6px rgba(16, 185, 129, 1)); }
+        }
+        .compass-tick {
+            position: absolute;
+            background: linear-gradient(to center, rgba(148, 163, 184, 0.3), transparent);
+            width: 2px;
+            height: 8px;
+        }
+        .compass-tick-major {
+            background: rgba(148, 163, 184, 0.8);
+            height: 12px;
+            width: 2.5px;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between items-center p-5 select-none overflow-hidden">
+<body class="min-h-screen flex flex-col justify-between items-center p-4 select-none overflow-hidden">
 
-    <!-- Top Status -->
-    <header class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-lg">
+    <!-- Header -->
+    <header class="w-full max-w-lg bg-slate-900/80 backdrop-blur-sm border border-emerald-500/20 rounded-3xl p-5 flex justify-between items-center shadow-xl">
         <div>
-            <h1 class="text-xs uppercase tracking-wider text-emerald-400 font-semibold">Qibla Kompass</h1>
-            <p id="location-status" class="text-sm text-slate-300 font-medium mt-0.5">GPS wird ermittelt...</p>
+            <h1 class="text-sm uppercase tracking-widest text-emerald-400 font-bold">Qibla Compass</h1>
+            <p id="location-status" class="text-xs text-slate-300 font-medium mt-1">Detecting location...</p>
         </div>
-        <button id="permission-btn" onclick="requestSensors()" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3.5 py-2 rounded-xl font-medium transition shadow-sm">
-            Sensor starten
+        <button id="permission-btn" onclick="requestSensors()" class="hidden bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white text-xs px-4 py-2.5 rounded-xl font-bold transition shadow-lg active:scale-95">
+            Enable
         </button>
     </header>
 
-    <!-- Main Compass Rose Centerpiece -->
-    <main class="w-full max-w-sm flex-1 flex flex-col items-center justify-center relative my-auto">
+    <!-- Main Compass Container -->
+    <main class="w-full max-w-md flex-1 flex flex-col items-center justify-center my-4 relative">
 
-        <!-- Desktop Notice -->
+        <!-- Desktop Warning -->
         <div id="desktop-warning" class="hidden absolute top-0 left-0 right-0 bg-amber-500/10 border border-amber-500/30 text-amber-200 p-3 rounded-xl text-xs text-center z-30">
-            Hinweis: Kein Kompass-Sensor gefunden. Bitte auf einem Smartphone öffnen.
+            Note: Compass sensor not found. Please open on a smartphone.
         </div>
 
-        <!-- Rotating Compass Rose Container -->
-        <div class="relative w-76 h-76 sm:w-84 sm:h-84 flex items-center justify-center">
+        <!-- Calibration Alert -->
+        <div id="calibration-warning" class="hidden absolute top-16 left-0 right-0 bg-blue-500/10 border border-blue-500/30 text-blue-200 p-3 rounded-xl text-xs text-center z-30">
+            Compass needs calibration. Rotate your phone in a figure-8 motion.
+        </div>
 
-            <!-- Outer Fixed Ring -->
-            <div class="absolute inset-0 rounded-full border-2 border-slate-800 bg-slate-900/90 shadow-2xl flex items-center justify-center pointer-events-none">
-                <!-- Fixed Top Indicator (Phone Front) -->
-                <div class="absolute top-2 w-1.5 h-4 bg-red-500 rounded-full z-20 shadow-md"></div>
+        <!-- Compass Visual -->
+        <div class="relative w-80 h-80 compass-container border-4 border-emerald-500/40 rounded-full shadow-2xl flex items-center justify-center overflow-hidden">
+            
+            <!-- Qibla Fixed Position Marker (At Top) -->
+            <div class="qibla-marker">
+                <div class="qibla-marker-icon" title="Qibla Direction"></div>
             </div>
 
-            <!-- Rotating Compass Rose Disk (Rotates opposite to device heading so North points North) -->
-            <div id="compass-disk" class="absolute inset-3 rounded-full border border-slate-700/60 dial-rotate flex items-center justify-center">
+            <!-- Rotating Compass Rose with Tick Marks -->
+            <div id="compass-rose" class="absolute inset-3 rounded-full border-2 border-emerald-500/30 flex items-center justify-center compass-dial">
                 
-                <!-- Compass Rose Points -->
-                <span class="absolute top-2 text-sm font-bold text-red-500 tracking-widest">N</span>
-                <span class="absolute bottom-2 text-xs font-semibold text-slate-400 tracking-widest">S</span>
-                <span class="absolute left-2 text-xs font-semibold text-slate-400 tracking-widest">W</span>
-                <span class="absolute right-2 text-xs font-semibold text-slate-400 tracking-widest">O</span>
+                <!-- Cardinal Direction Markers -->
+                <div class="absolute top-4 flex flex-col items-center">
+                    <span class="text-sm font-bold text-emerald-400 tracking-widest">N</span>
+                    <div class="w-1 h-3 bg-emerald-500 rounded-full mt-1"></div>
+                </div>
+                <div class="absolute bottom-4 text-sm font-semibold text-slate-400 tracking-widest">S</div>
+                <div class="absolute left-4 text-sm font-semibold text-slate-400 tracking-widest">W</div>
+                <div class="absolute right-4 text-sm font-semibold text-slate-400 tracking-widest">E</div>
 
-                <span class="absolute top-6 left-12 text-[10px] text-slate-500 font-medium">NW</span>
-                <span class="absolute top-6 right-12 text-[10px] text-slate-500 font-medium">NO</span>
-                <span class="absolute bottom-6 left-12 text-[10px] text-slate-500 font-medium">SW</span>
-                <span class="absolute bottom-6 right-12 text-[10px] text-slate-500 font-medium">SO</span>
+                <!-- Intercardinal Directions -->
+                <div class="absolute top-10 right-10 text-[11px] text-slate-500 font-medium">NE</div>
+                <div class="absolute top-10 left-10 text-[11px] text-slate-500 font-medium">NW</div>
+                <div class="absolute bottom-10 right-10 text-[11px] text-slate-500 font-medium">SE</div>
+                <div class="absolute bottom-10 left-10 text-[11px] text-slate-500 font-medium">SW</div>
 
-                <!-- Degree Ticks Ring -->
-                <div class="absolute inset-6 rounded-full border border-dashed border-slate-800"></div>
-
-                <!-- Qibla Direction Marker Line on the Compass Rose -->
-                <div id="qibla-marker" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div class="absolute w-1 h-[78%] bg-emerald-500/30 rounded-full flex flex-col justify-between items-center py-4">
-                        <div class="w-3 h-3 bg-emerald-400 rounded-full shadow-lg shadow-emerald-500/50 flex items-center justify-center">
-                            <svg class="w-2 h-2 text-slate-950" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2z"/></svg>
-                        </div>
-                        <div class="w-2 h-2 bg-emerald-500/50 rounded-full"></div>
-                    </div>
+                <!-- Degree Marks Ring -->
+                <div class="absolute inset-6 rounded-full border border-slate-700/40">
+                    <svg class="w-full h-full absolute" viewBox="0 0 200 200" style="filter: opacity(0.6);">
+                        <circle cx="100" cy="100" r="95" fill="none" stroke="rgba(148, 163, 184, 0.1)" stroke-width="0.5" stroke-dasharray="5,10"/>
+                    </svg>
                 </div>
 
+                <!-- Gradient circle -->
+                <div class="absolute inset-12 rounded-full border border-emerald-500/10"></div>
             </div>
 
-            <!-- Center Hub / Kaaba Indicator -->
-            <div id="center-hub" class="w-14 h-14 rounded-full bg-slate-900 border-2 border-slate-700 flex items-center justify-center z-10 shadow-xl transition-colors duration-300">
-                <svg class="w-6 h-6 text-slate-300 transition-colors duration-300" id="hub-icon" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 5h2v5h-2z"/>
-                </svg>
+            <!-- Qibla Needle (Animated) -->
+            <div id="qibla-needle" class="absolute inset-0 flex items-center justify-center compass-dial pointer-events-none z-20">
+                <div class="absolute top-6 w-8 h-32 flex flex-col items-center">
+                    <!-- Arrowhead -->
+                    <div id="needle-head" class="w-0 h-0 border-l-5 border-r-5 border-l-transparent border-r-transparent border-b-[28px] border-b-emerald-400 transition-colors duration-300 filter drop-shadow-lg" style="border-left-width: 6px; border-right-width: 6px; border-left-color: transparent; border-right-color: transparent;"></div>
+                    <!-- Shaft -->
+                    <div id="needle-body" class="w-2 h-20 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-full mt-[-1px] transition-colors duration-300 shadow-lg" style="filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.8));"></div>
+                    <!-- Tail -->
+                    <div class="w-2 h-6 bg-slate-600 rounded-full"></div>
+                </div>
             </div>
+
+            <!-- Center Pin with Glow -->
+            <div class="w-4 h-4 rounded-full bg-gradient-to-br from-emerald-300 to-emerald-600 z-30 shadow-lg" style="filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.7));"></div>
 
         </div>
 
         <!-- Info Cards -->
-        <div class="w-full mt-6 grid grid-cols-2 gap-3">
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 text-center shadow-md">
-                <span class="text-[11px] text-slate-400 font-medium uppercase tracking-wider block">Ausrichtung</span>
-                <span id="heading-display" class="text-base font-bold text-slate-100 font-mono mt-0.5 block">0° N</span>
+        <div class="w-full mt-8 grid grid-cols-2 gap-4">
+            <div class="bg-slate-900/60 backdrop-blur-sm border border-emerald-500/20 rounded-2xl p-4 text-center shadow-lg hover:border-emerald-500/40 transition">
+                <span class="text-[11px] text-slate-400 font-bold uppercase tracking-widest block">Current Heading</span>
+                <span id="heading-display" class="text-2xl font-black text-emerald-400 font-mono mt-2 block">0° N</span>
             </div>
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 text-center shadow-md">
-                <span class="text-[11px] text-slate-400 font-medium uppercase tracking-wider block">Qibla Richtung</span>
-                <span id="qibla-angle-val" class="text-base font-bold text-emerald-400 font-mono mt-0.5 block">--°</span>
+            <div class="bg-slate-900/60 backdrop-blur-sm border border-emerald-500/20 rounded-2xl p-4 text-center shadow-lg hover:border-emerald-500/40 transition">
+                <span class="text-[11px] text-slate-400 font-bold uppercase tracking-widest block">Qibla Direction</span>
+                <span id="qibla-angle-val" class="text-2xl font-black text-emerald-400 font-mono mt-2 block">--°</span>
             </div>
         </div>
 
+        <!-- Accuracy Indicator -->
+        <div class="w-full mt-5 bg-gradient-to-r from-slate-900/60 to-slate-800/60 backdrop-blur-sm border border-emerald-500/15 rounded-2xl p-4 flex justify-between items-center text-xs shadow-lg">
+            <span id="gps-indicator" class="text-slate-300">GPS: <span class="text-emerald-400 font-bold">Searching...</span></span>
+            <span id="sensor-indicator" class="text-slate-300">Sensor: <span class="text-emerald-400 font-bold">Waiting...</span></span>
+            <span id="accuracy-show" class="text-slate-300">Accuracy: <span class="text-emerald-400 font-bold" id="accuracy-val">--</span></span>
+        </div>
+
         <!-- Instruction Text -->
-        <p id="direction-instruction" class="text-xs text-slate-400 text-center mt-4 font-medium">
-            Drehe das Smartphone, bis die grüne Kaaba-Markierung nach oben zeigt.
+        <p id="direction-instruction" class="text-sm text-slate-300 text-center mt-6 font-medium leading-relaxed max-w-xs">
+            Rotate your phone until the green arrow aligns with the star marker at the top.
         </p>
 
     </main>
 
     <!-- Footer -->
-    <footer class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-3 flex justify-between items-center text-xs text-slate-400 shadow-md">
-        <span>Ziel: Kaaba (Mekka)</span>
-        <span>GPS: <span id="accuracy-val" class="text-slate-200">--</span></span>
+    <footer class="w-full max-w-lg bg-slate-900/80 backdrop-blur-sm border border-blue-400/20 rounded-3xl p-4 flex justify-between items-center text-xs text-slate-300 shadow-xl font-medium">
+        <span>🕋 Target: <span class="text-sky-400 font-bold">Kaaba</span></span>
+        <span>📍 Mecca, Saudi Arabia</span>
     </footer>
 
     <!-- JavaScript Application Logic -->
     <script>
+        // ============ CONSTANTS & CONFIGURATION ============
         const MECCA_LAT = 21.4225;
         const MECCA_LNG = 39.8262;
+        const SMOOTHING_ALPHA = 0.15; // Lower = smoother, but slower response
+        const ALIGNMENT_TOLERANCE = 3; // degrees
+        const HEADING_SAMPLE_RATE = 50; // ms between updates
 
+        // ============ STATE VARIABLES ============
         let userLat = null;
         let userLng = null;
         let qiblaAngle = 0;
         let currentHeading = 0;
+        let smoothedHeading = 0;
         let isAligned = false;
+        let sensorStatus = { gps: false, compass: false, orientation: false };
+        let lastHeadingTime = 0;
 
+        // ============ DOM ELEMENTS ============
         const locationStatusEl = document.getElementById('location-status');
         const permissionBtn = document.getElementById('permission-btn');
-        const compassDisk = document.getElementById('compass-disk');
-        const qiblaMarker = document.getElementById('qibla-marker');
-        const centerHub = document.getElementById('center-hub');
-        const hubIcon = document.getElementById('hub-icon');
+        const compassRose = document.getElementById('compass-rose');
+        const qiblaNeedle = document.getElementById('qibla-needle');
+        const needleHead = document.getElementById('needle-head');
+        const needleBody = document.getElementById('needle-body');
         const headingDisplay = document.getElementById('heading-display');
         const qiblaAngleVal = document.getElementById('qibla-angle-val');
         const accuracyVal = document.getElementById('accuracy-val');
         const desktopWarning = document.getElementById('desktop-warning');
+        const calibrationWarning = document.getElementById('calibration-warning');
         const directionInstruction = document.getElementById('direction-instruction');
+        const gpsIndicator = document.getElementById('gps-indicator');
+        const sensorIndicator = document.getElementById('sensor-indicator');
 
+        // ============ INITIALIZATION ============
         window.addEventListener('DOMContentLoaded', () => {
             initLocation();
             checkSensors();
+            registerServiceWorker();
         });
 
+        // ============ SERVICE WORKER (PWA SUPPORT) ============
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('data:application/javascript,' + encodeURIComponent(`
+                    self.addEventListener('install', e => self.skipWaiting());
+                    self.addEventListener('activate', e => self.clients.claim());
+                    self.addEventListener('fetch', e => {
+                        e.respondWith(
+                            caches.match(e.request).then(r => r || fetch(e.request)).catch(() => new Response('Offline'))
+                        );
+                    });
+                `)).catch(() => {});
+            }
+        }
+
+        // ============ GEOLOCATION & QIBLA CALCULATION ============
         function initLocation() {
             if (!navigator.geolocation) {
-                locationStatusEl.textContent = "GPS wird nicht unterstützt";
+                locationStatusEl.textContent = "GPS not supported";
+                updateGPSIndicator(false);
                 return;
             }
 
-            navigator.geolocation.getCurrentPosition(
+            navigator.geolocation.watchPosition(
                 (pos) => {
                     userLat = pos.coords.latitude;
                     userLng = pos.coords.longitude;
@@ -153,16 +259,16 @@
                     accuracyVal.textContent = `±${Math.round(acc)}m`;
                     qiblaAngle = calculateQibla(userLat, userLng);
                     qiblaAngleVal.textContent = `${Math.round(qiblaAngle)}°`;
-                    locationStatusEl.textContent = "GPS aktiv";
-
-                    // Position the Qibla marker on the compass disk
-                    qiblaMarker.style.transform = `rotate(${qiblaAngle}deg)`;
+                    locationStatusEl.textContent = "GPS Active";
+                    updateGPSIndicator(true);
+                    updateCompass();
                 },
                 (err) => {
                     console.warn(err);
-                    locationStatusEl.textContent = "Standort verweigert";
+                    locationStatusEl.textContent = "Location denied";
+                    updateGPSIndicator(false);
                 },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
             );
         }
 
@@ -179,14 +285,17 @@
             return (qibla + 360) % 360;
         }
 
+        // ============ SENSOR INITIALIZATION ============
         function checkSensors() {
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 permissionBtn.classList.remove('hidden');
+                updateSensorIndicator(false);
             } else if ('ondeviceorientationabsolute' in window || 'ondeviceorientation' in window) {
                 startCompass();
             } else {
                 desktopWarning.classList.remove('hidden');
-                locationStatusEl.textContent = "Kein Kompass-Sensor";
+                locationStatusEl.textContent = "No sensor detected";
+                updateSensorIndicator(false);
             }
         }
 
@@ -198,7 +307,7 @@
                             permissionBtn.classList.add('hidden');
                             startCompass();
                         } else {
-                            alert("Berechtigung für Sensoren verweigert.");
+                            alert("Permission denied for sensors.");
                         }
                     })
                     .catch(console.error);
@@ -208,10 +317,18 @@
         function startCompass() {
             const eventName = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
             window.addEventListener(eventName, handleOrientation, true);
-            locationStatusEl.textContent = "Kompass aktiv";
+            locationStatusEl.textContent = "Compass Active";
+            sensorStatus.compass = true;
+            sensorStatus.orientation = true;
+            updateSensorIndicator(true);
         }
 
+        // ============ ORIENTATION HANDLING (WITH SMOOTHING) ============
         function handleOrientation(e) {
+            const now = Date.now();
+            if (now - lastHeadingTime < HEADING_SAMPLE_RATE) return;
+            lastHeadingTime = now;
+
             let heading = null;
 
             if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {
@@ -221,43 +338,125 @@
             }
 
             if (heading !== null) {
-                currentHeading = heading;
+                // Apply exponential moving average (low-pass filter)
+                smoothedHeading = smoothHeading(heading, smoothedHeading, SMOOTHING_ALPHA);
+                currentHeading = smoothedHeading;
                 updateCompass();
+
+                // Detect poor calibration (high variance)
+                const variance = Math.abs(heading - smoothedHeading);
+                if (variance > 15) {
+                    calibrationWarning.classList.remove('hidden');
+                } else {
+                    calibrationWarning.classList.add('hidden');
+                }
             }
         }
 
+        function smoothHeading(newHeading, prevHeading, alpha) {
+            let diff = newHeading - prevHeading;
+            if (diff > 180) diff -= 360;
+            if (diff < -180) diff += 360;
+            return (prevHeading + alpha * diff + 360) % 360;
+        }
+
+        // ============ COMPASS UPDATE & DISPLAY ============
         function updateCompass() {
-            const cardinals = ["N", "NO", "O", "SO", "S", "SW", "W", "NW"];
+            if (!userLat || !userLng) return;
+
+            const cardinals = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
             const idx = Math.round((currentHeading % 360) / 45) % 8;
             headingDisplay.textContent = `${Math.round(currentHeading)}° ${cardinals[idx]}`;
 
-            // Rotate the entire compass disk counter-clockwise by heading so North points to real North
-            compassDisk.style.transform = `rotate(${-currentHeading}deg)`;
+            // Rotate compass rose
+            compassRose.style.transform = `rotate(${-currentHeading}deg)`;
 
-            // Check if device is pointing towards Qibla
-            // Net angle of Qibla marker relative to top of phone = (qiblaAngle - currentHeading)
+            // Rotate qibla needle to point directly at Mecca
+            const needleRotation = qiblaAngle - currentHeading;
+            qiblaNeedle.style.transform = `rotate(${needleRotation}deg)`;
+
+            // Check alignment
             let diff = Math.abs(qiblaAngle - currentHeading);
             if (diff > 180) diff = 360 - diff;
 
-            if (diff <= 3) {
+            if (diff <= ALIGNMENT_TOLERANCE) {
                 if (!isAligned) {
-                    isAligned = true;
-                    centerHub.style.borderColor = '#10B981';
-                    centerHub.style.background = '#064e3b';
-                    hubIcon.style.color = '#34d399';
-                    directionInstruction.textContent = "✓ Exakt in Richtung Kaaba!";
-                    directionInstruction.className = "text-xs text-emerald-400 font-bold text-center mt-4";
-                    if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
+                    triggerSuccess();
                 }
             } else {
                 if (isAligned) {
-                    isAligned = false;
-                    centerHub.style.borderColor = '';
-                    centerHub.style.background = '';
-                    hubIcon.style.color = '';
-                    directionInstruction.textContent = "Drehe das Smartphone, bis die grüne Kaaba-Markierung nach oben zeigt.";
-                    directionInstruction.className = "text-xs text-slate-400 text-center mt-4 font-medium";
+                    resetSuccess();
                 }
+            }
+        }
+
+        function triggerSuccess() {
+            isAligned = true;
+            needleHead.style.borderBottomColor = '#34d399';
+            needleBody.style.backgroundColor = '#34d399';
+            directionInstruction.textContent = "✓ Exactly facing the Qibla!";
+            directionInstruction.className = "text-xs text-emerald-400 font-bold text-center mt-5";
+
+            // Enhanced haptic feedback
+            if (navigator.vibrate) {
+                navigator.vibrate([40, 30, 40, 30, 80]);
+            }
+
+            // Audio feedback
+            playAlignmentTone();
+        }
+
+        function resetSuccess() {
+            isAligned = false;
+            needleHead.style.borderBottomColor = '';
+            needleBody.style.backgroundColor = '';
+            directionInstruction.textContent = "Rotate your phone until the green arrow points straight up.";
+            directionInstruction.className = "text-xs text-slate-400 text-center mt-5 font-medium leading-relaxed";
+        }
+
+        // ============ AUDIO FEEDBACK ============
+        function playAlignmentTone() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+
+                osc.frequency.value = 800;
+                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + 0.3);
+            } catch (e) {
+                // Audio context not available, silently fail
+            }
+        }
+
+        // ============ UI STATUS INDICATORS ============
+        function updateGPSIndicator(active) {
+            sensorStatus.gps = active;
+            const span = gpsIndicator.querySelector('span');
+            if (active) {
+                span.textContent = "✓ Active";
+                span.className = "text-emerald-400";
+            } else {
+                span.textContent = "✗ Waiting";
+                span.className = "text-slate-300 pulse-subtle";
+            }
+        }
+
+        function updateSensorIndicator(active) {
+            sensorStatus.orientation = active;
+            const span = sensorIndicator.querySelector('span');
+            if (active) {
+                span.textContent = "✓ Ready";
+                span.className = "text-emerald-400";
+            } else {
+                span.textContent = "✗ Waiting";
+                span.className = "text-slate-300 pulse-subtle";
             }
         }
     </script>
