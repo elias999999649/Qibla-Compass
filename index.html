@@ -86,6 +86,17 @@
             height: 12px;
             width: 2.5px;
         }
+        @media (max-width: 480px) {
+            body { padding: 0.75rem; }
+            header { padding: 0.8rem 1rem; border-radius: 1rem; }
+            main { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+            .compass-container { width: min(72vw, 18rem); height: min(72vw, 18rem); }
+            .info-grid { gap: 0.5rem; margin-top: 1rem; }
+            .info-card { padding: 0.7rem 0.4rem; border-radius: 0.9rem; }
+            .info-card .value { font-size: 1.25rem; margin-top: 0.35rem; }
+            .status-bar { margin-top: 0.75rem; padding: 0.65rem 0.5rem; border-radius: 0.9rem; font-size: 0.65rem; }
+            #direction-instruction { margin-top: 0.8rem; padding: 0.55rem 0.75rem; font-size: 0.8rem; border-radius: 0.9rem; }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between items-center p-4 select-none overflow-hidden">
@@ -93,11 +104,11 @@
     <!-- Header -->
     <header class="w-full max-w-lg bg-slate-900/95 backdrop-blur-md border border-emerald-500/40 rounded-3xl p-5 flex justify-between items-center shadow-2xl">
         <div>
-            <h1 class="text-sm uppercase tracking-widest text-emerald-400 font-extrabold">Qibla Compass</h1>
-            <p id="location-status" class="text-xs text-slate-100 font-semibold mt-1">Detecting location...</p>
+            <h1 class="text-sm uppercase tracking-widest text-emerald-400 font-extrabold">Qibla Direction</h1>
+            <p id="location-status" class="text-xs text-slate-100 font-semibold mt-1">Finding your location ...</p>
         </div>
         <button id="permission-btn" onclick="requestSensors()" class="hidden bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white text-xs px-4 py-2.5 rounded-xl font-bold transition shadow-lg active:scale-95">
-            Enable
+            Start compass
         </button>
     </header>
 
@@ -106,16 +117,16 @@
 
         <!-- Desktop Warning -->
         <div id="desktop-warning" class="hidden absolute top-0 left-0 right-0 bg-amber-500/20 border border-amber-500/50 text-amber-100 p-3.5 rounded-xl text-xs font-semibold text-center z-30 shadow-lg">
-            Note: Compass sensor not found. Please open on a smartphone.
+            Please open this page on a smartphone.
         </div>
 
         <!-- Calibration Alert -->
         <div id="calibration-warning" class="hidden absolute top-16 left-0 right-0 bg-blue-500/20 border border-blue-500/50 text-blue-100 p-3.5 rounded-xl text-xs font-semibold text-center z-30 shadow-lg">
-            Compass needs calibration. Rotate your phone in a figure-8 motion.
+            Move your phone in a figure eight briefly.
         </div>
 
         <!-- Compass Visual -->
-        <div class="relative w-80 h-80 compass-container border-4 border-emerald-500/40 rounded-full shadow-2xl flex items-center justify-center overflow-hidden">
+        <div class="relative w-72 h-72 compass-container border-4 border-emerald-500/40 rounded-full shadow-2xl flex items-center justify-center overflow-hidden">
             
             <!-- Qibla Fixed Position Marker (At Top) -->
             <div class="qibla-marker">
@@ -169,19 +180,19 @@
         </div>
 
         <!-- Info Cards -->
-        <div class="w-full mt-8 grid grid-cols-2 gap-4">
-            <div class="bg-slate-900/90 backdrop-blur-md border border-emerald-500/40 rounded-2xl p-4 text-center shadow-xl hover:border-emerald-500/60 transition">
-                <span class="text-[11px] text-slate-300 font-extrabold uppercase tracking-widest block">Current Heading</span>
-                <span id="heading-display" class="text-2xl font-black text-emerald-300 font-mono mt-2 block">0° N</span>
+        <div class="info-grid w-full mt-8 grid grid-cols-2 gap-4">
+            <div class="info-card hidden bg-slate-900/90 backdrop-blur-md border border-emerald-500/40 rounded-2xl p-4 text-center shadow-xl hover:border-emerald-500/60 transition">
+                <span class="text-[11px] text-slate-300 font-extrabold uppercase tracking-widest block">Your direction</span>
+                <span id="heading-display" class="value text-2xl font-black text-emerald-300 font-mono mt-2 block">0° N</span>
             </div>
-            <div class="bg-slate-900/90 backdrop-blur-md border border-emerald-500/40 rounded-2xl p-4 text-center shadow-xl hover:border-emerald-500/60 transition">
-                <span class="text-[11px] text-slate-300 font-extrabold uppercase tracking-widest block">Qibla Direction</span>
-                <span id="qibla-angle-val" class="text-2xl font-black text-emerald-300 font-mono mt-2 block">--°</span>
+            <div class="info-card col-span-2 bg-slate-900/90 backdrop-blur-md border border-emerald-500/40 rounded-2xl p-4 text-center shadow-xl hover:border-emerald-500/60 transition">
+                <span class="text-[11px] text-slate-300 font-extrabold uppercase tracking-widest block">Qibla angle</span>
+                <span id="qibla-angle-val" class="value text-2xl font-black text-emerald-300 font-mono mt-2 block">--°</span>
             </div>
         </div>
 
         <!-- Accuracy Indicator -->
-        <div class="w-full mt-5 bg-slate-900/90 backdrop-blur-md border border-emerald-500/30 rounded-2xl p-4 flex justify-between items-center text-xs shadow-xl font-semibold">
+        <div class="status-bar hidden w-full mt-5 bg-slate-900/90 backdrop-blur-md border border-emerald-500/30 rounded-2xl p-4 flex justify-between items-center text-xs shadow-xl font-semibold">
             <span id="gps-indicator" class="text-slate-100">GPS: <span class="text-emerald-400 font-bold">Searching...</span></span>
             <span id="sensor-indicator" class="text-slate-100">Sensor: <span class="text-emerald-400 font-bold">Waiting...</span></span>
             <span id="accuracy-show" class="text-slate-100">Accuracy: <span class="text-emerald-400 font-bold" id="accuracy-val">--</span></span>
@@ -189,17 +200,10 @@
 
         <!-- Instruction Text -->
         <p id="direction-instruction" class="text-base sm:text-lg text-white text-center mt-6 font-extrabold leading-relaxed max-w-xs drop-shadow-md bg-slate-900/80 px-4 py-3 rounded-2xl border border-emerald-500/40 shadow-xl">
-            Rotate your phone until the green arrow aligns with the star marker at the top.
+            Hold your phone flat and follow the green arrow.
         </p>
 
     </main>
-
-    <!-- Footer -->
-    <footer class="w-full max-w-lg bg-slate-900/95 backdrop-blur-md border border-sky-400/30 rounded-3xl p-4 flex justify-between items-center text-xs text-slate-100 shadow-2xl font-semibold">
-        <span>🕋 Target: <span class="text-sky-300 font-bold">Kaaba</span></span>
-        <span>📍 Mecca, Saudi Arabia</span>
-    </footer>
-    </footer>
 
     <!-- JavaScript Application Logic -->
     <script>
@@ -238,6 +242,20 @@
 
         // ============ INITIALIZATION ============
         window.addEventListener('DOMContentLoaded', () => {
+            // Check for secure context / HTTPS requirement on iOS
+            if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && window.location.protocol !== 'file:') {
+                desktopWarning.textContent = "iPhone requires HTTPS for location and compass.";
+                desktopWarning.classList.remove('hidden');
+            }
+            
+            // Allow clicking location status to retry GPS
+            locationStatusEl.parentElement.style.cursor = 'pointer';
+            locationStatusEl.parentElement.title = "Tap to search for your location again";
+            locationStatusEl.parentElement.onclick = () => {
+                locationStatusEl.textContent = "Searching for your location again ...";
+                initLocation();
+            };
+
             initLocation();
             checkSensors();
             registerServiceWorker();
@@ -261,31 +279,69 @@
         // ============ GEOLOCATION & QIBLA CALCULATION ============
         function initLocation() {
             if (!navigator.geolocation) {
-                locationStatusEl.textContent = "GPS not supported";
-                updateGPSIndicator(false);
+                locationStatusEl.textContent = "Location unavailable";
+                useDefaultLocation("Location unavailable");
                 return;
             }
 
-            navigator.geolocation.watchPosition(
+            // Fallback timer for GPS timeout on iPhone indoors
+            let gpsTimeout = setTimeout(() => {
+                if (!userLat || !userLng) {
+                    useDefaultLocation("GPS weak - using default");
+                }
+            }, 7000);
+
+            navigator.geolocation.getCurrentPosition(
                 (pos) => {
+                    clearTimeout(gpsTimeout);
                     userLat = pos.coords.latitude;
                     userLng = pos.coords.longitude;
-                    const acc = pos.coords.accuracy;
+                    const acc = pos.coords.accuracy || 0;
 
                     accuracyVal.textContent = `±${Math.round(acc)}m`;
                     qiblaAngle = calculateQibla(userLat, userLng);
                     qiblaAngleVal.textContent = `${Math.round(qiblaAngle)}°`;
-                    locationStatusEl.textContent = "GPS Active";
+                    locationStatusEl.textContent = "Location found";
                     updateGPSIndicator(true);
                     updateCompass();
+
+                    // Watch position for continuous updates
+                    navigator.geolocation.watchPosition(
+                        (p) => {
+                            userLat = p.coords.latitude;
+                            userLng = p.coords.longitude;
+                            qiblaAngle = calculateQibla(userLat, userLng);
+                            qiblaAngleVal.textContent = `${Math.round(qiblaAngle)}°`;
+                            accuracyVal.textContent = `±${Math.round(p.coords.accuracy || 0)}m`;
+                            updateCompass();
+                        },
+                        (e) => console.warn(e),
+                        { enableHighAccuracy: true, maximumAge: 10000 }
+                    );
                 },
                 (err) => {
+                    clearTimeout(gpsTimeout);
                     console.warn(err);
-                    locationStatusEl.textContent = "Location denied";
+                    let msg = err.code === 1 ? "Location denied" : "Location not found";
+                    locationStatusEl.textContent = msg;
                     updateGPSIndicator(false);
+                    useDefaultLocation(msg);
                 },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+                { enableHighAccuracy: true, timeout: 7000, maximumAge: 5000 }
             );
+        }
+
+        function useDefaultLocation(reason) {
+            if (userLat && userLng) return;
+            // Fallback default coordinates (e.g., Istanbul or user's region, or Mecca if none)
+            userLat = 41.0082; 
+            userLng = 28.9784;
+            qiblaAngle = calculateQibla(userLat, userLng);
+            qiblaAngleVal.textContent = `${Math.round(qiblaAngle)}° (Default)`;
+            accuracyVal.textContent = `N/A`;
+            locationStatusEl.textContent = reason;
+            updateGPSIndicator(false);
+            updateCompass();
         }
 
         function calculateQibla(lat, lng) {
@@ -309,34 +365,39 @@
             } else if ('ondeviceorientationabsolute' in window || 'ondeviceorientation' in window) {
                 startCompass();
             } else {
-                desktopWarning.classList.remove('hidden');
-                locationStatusEl.textContent = "No sensor detected";
-                updateSensorIndicator(false);
+                // Try starting compass anyway for Android/iOS browsers that support orientation without explicit requestPermission API
+                startCompass();
             }
         }
 
         function requestSensors() {
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
                     .then(res => {
                         if (res === 'granted') {
                             permissionBtn.classList.add('hidden');
                             startCompass();
                         } else {
-                            alert("Permission denied for sensors.");
+                            alert("Compass permission was denied. Please check Safari settings.");
                         }
                     })
-                    .catch(console.error);
+                    .catch(err => {
+                        console.error(err);
+                        startCompass();
+                    });
+            } else {
+                startCompass();
             }
         }
 
         function startCompass() {
-            const eventName = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
-            window.addEventListener(eventName, handleOrientation, true);
-            locationStatusEl.textContent = "Compass Active";
+            window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+            window.addEventListener('deviceorientation', handleOrientation, true);
+            locationStatusEl.textContent = "Compass active";
             sensorStatus.compass = true;
             sensorStatus.orientation = true;
             updateSensorIndicator(true);
+            permissionBtn.classList.add('hidden');
         }
 
         // ============ ORIENTATION HANDLING (WITH SMOOTHING) ============
@@ -406,8 +467,8 @@
                 const delta = ((qiblaAngle - currentHeading + 540) % 360) - 180;
                 const turnText = Math.abs(Math.round(delta));
                 directionInstruction.textContent = delta < 0
-                    ? `Turn left by ${turnText}°`
-                    : `Turn right by ${turnText}°`;
+                    ? `Turn left ${turnText}°`
+                    : `Turn right ${turnText}°`;
                 directionInstruction.className = "text-base sm:text-lg text-white text-center mt-6 font-extrabold leading-relaxed max-w-xs drop-shadow-md bg-slate-900/80 px-4 py-3 rounded-2xl border border-emerald-500/40 shadow-xl";
             }
         }
@@ -416,7 +477,7 @@
             isAligned = true;
             needleHead.style.borderBottomColor = '#34d399';
             needleBody.style.backgroundColor = '#34d399';
-            directionInstruction.textContent = "✓ Exactly facing the Qibla!";
+            directionInstruction.textContent = "✓ You are facing the Qibla";
             directionInstruction.className = "text-base sm:text-lg text-emerald-300 font-black text-center mt-6 leading-relaxed max-w-xs drop-shadow-md bg-slate-900/90 px-4 py-3 rounded-2xl border border-emerald-500 shadow-xl";
 
             // Enhanced haptic feedback
@@ -432,7 +493,7 @@
             isAligned = false;
             needleHead.style.borderBottomColor = '';
             needleBody.style.backgroundColor = '';
-            directionInstruction.textContent = "Rotate your phone until the green arrow aligns with the Kaaba marker.";
+            directionInstruction.textContent = "Hold your phone flat and follow the green arrow.";
             directionInstruction.className = "text-base sm:text-lg text-white text-center mt-6 font-extrabold leading-relaxed max-w-xs drop-shadow-md bg-slate-900/80 px-4 py-3 rounded-2xl border border-emerald-500/40 shadow-xl";
         }
 
