@@ -188,7 +188,7 @@
         </div>
 
         <!-- Instruction Text -->
-        <p id="direction-instruction" class="text-sm text-slate-100 text-center mt-6 font-bold leading-relaxed max-w-xs drop-shadow">
+        <p id="direction-instruction" class="text-base sm:text-lg text-white text-center mt-6 font-extrabold leading-relaxed max-w-xs drop-shadow-md bg-slate-900/80 px-4 py-3 rounded-2xl border border-emerald-500/40 shadow-xl">
             Rotate your phone until the green arrow aligns with the star marker at the top.
         </p>
 
@@ -406,9 +406,9 @@
                 const delta = ((qiblaAngle - currentHeading + 540) % 360) - 180;
                 const turnText = Math.abs(Math.round(delta));
                 directionInstruction.textContent = delta < 0
-                    ? `Turn slightly left by ${turnText}°`
-                    : `Turn slightly right by ${turnText}°`;
-                directionInstruction.className = "text-sm text-slate-300 text-center mt-6 font-medium leading-relaxed max-w-xs";
+                    ? `Turn left by ${turnText}°`
+                    : `Turn right by ${turnText}°`;
+                directionInstruction.className = "text-base sm:text-lg text-white text-center mt-6 font-extrabold leading-relaxed max-w-xs drop-shadow-md bg-slate-900/80 px-4 py-3 rounded-2xl border border-emerald-500/40 shadow-xl";
             }
         }
 
@@ -417,7 +417,7 @@
             needleHead.style.borderBottomColor = '#34d399';
             needleBody.style.backgroundColor = '#34d399';
             directionInstruction.textContent = "✓ Exactly facing the Qibla!";
-            directionInstruction.className = "text-sm text-emerald-400 font-bold text-center mt-6 leading-relaxed max-w-xs";
+            directionInstruction.className = "text-base sm:text-lg text-emerald-300 font-black text-center mt-6 leading-relaxed max-w-xs drop-shadow-md bg-slate-900/90 px-4 py-3 rounded-2xl border border-emerald-500 shadow-xl";
 
             // Enhanced haptic feedback
             if (navigator.vibrate) {
@@ -433,7 +433,7 @@
             needleHead.style.borderBottomColor = '';
             needleBody.style.backgroundColor = '';
             directionInstruction.textContent = "Rotate your phone until the green arrow aligns with the Kaaba marker.";
-            directionInstruction.className = "text-sm text-slate-300 text-center mt-6 font-medium leading-relaxed max-w-xs";
+            directionInstruction.className = "text-base sm:text-lg text-white text-center mt-6 font-extrabold leading-relaxed max-w-xs drop-shadow-md bg-slate-900/80 px-4 py-3 rounded-2xl border border-emerald-500/40 shadow-xl";
         }
 
         // ============ AUDIO FEEDBACK ============
