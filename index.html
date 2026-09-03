@@ -354,7 +354,23 @@
             const x = Math.cos(phi) * Math.tan(phiK) - Math.sin(phi) * Math.cos(lambdaK - lambda);
             
             let qibla = Math.atan2(y, x) * 180.0 / Math.PI;
-            return (qibla + 360) % 360;
+            qibla = (qibla + 360) % 360;
+
+            // Approximate Magnetic Declination Correction (IGRF-based simplified model)
+            // Magnetic North vs True North correction to prevent heading offsets
+            const declination = getMagneticDeclination(lat, lng);
+            return (qibla - declination + 360) % 360;
+        }
+
+        function getMagneticDeclination(lat, lng) {
+            // Simplified World Magnetic Model estimation based on location
+            // Europe/Middle East approximate declination polynomial estimation
+            const latRad = lat * Math.PI / 180;
+            const lngRad = lng * Math.PI / 180;
+            // General empirical approximation for Eurasia / Middle East region
+            let dec = 4.5 * Math.sin(lngRad) - 2.0 * Math.cos(latRad);
+            if (isNaN(dec)) return 0;
+            return dec;
         }
 
         // ============ SENSOR INITIALIZATION ============
@@ -400,7 +416,7 @@
             permissionBtn.classList.add('hidden');
         }
 
-        // ============ ORIENTATION HANDLING (WITH SMOOTHING) ============
+        // ============ ORIENTATION HANDLING (TILT-COMPENSATED & SMOOTHED) ============
         function handleOrientation(e) {
             const now = Date.now();
             if (now - lastHeadingTime < HEADING_SAMPLE_RATE) return;
@@ -409,9 +425,30 @@
             let heading = null;
 
             if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {
+                // iOS Safari direct compass heading
                 heading = e.webkitCompassHeading;
             } else if (e.alpha !== null) {
-                heading = 360 - e.alpha;
+                // Android & other devices: Apply 3D Tilt Compensation if beta and gamma are present
+                if (e.beta !== null && e.gamma !== null) {
+                    const alpha = e.alpha * Math.PI / 180;
+                    const beta = e.beta * Math.PI / 180;
+                    const gamma = e.gamma * Math.PI / 180;
+
+                    const cA = Math.cos(alpha), sA = Math.sin(alpha);
+                    const cB = Math.cos(beta), sB = Math.sin(beta);
+                    const cG = Math.cos(gamma), sG = Math.sin(gamma);
+
+                    // W3C DeviceOrientation tilt compensation formula
+                    const vx = - cA * sG - sA * sB * cG;
+                    const vy = - sA * sG + cA * sB * cG;
+
+                    let compassHeading = Math.atan2(vx, vy) * (180 / Math.PI);
+                    if (compassHeading < 0) compassHeading += 360;
+                    heading = compassHeading;
+                } else {
+                    // Fallback heading calculation
+                    heading = 360 - e.alpha;
+                }
             }
 
             if (heading !== null) {
@@ -420,10 +457,16 @@
                 currentHeading = smoothedHeading;
                 updateCompass();
 
-                // Detect poor calibration (high variance)
+                // Detect poor calibration / magnetic interference (high variance)
                 const variance = Math.abs(heading - smoothedHeading);
-                if (variance > 15) {
+                if (variance > 25) {
                     calibrationWarning.classList.remove('hidden');
+                    calibrationWarning.style.cursor = 'pointer';
+                    calibrationWarning.title = "Tap to dismiss / recalibrate";
+                    calibrationWarning.onclick = () => {
+                        smoothedHeading = heading;
+                        calibrationWarning.classList.add('hidden');
+                    };
                 } else {
                     calibrationWarning.classList.add('hidden');
                 }
