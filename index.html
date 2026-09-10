@@ -578,7 +578,7 @@
       // ============ CONSTANTS & CONFIGURATION ============
       const MECCA_LAT = 21.422487;
       const MECCA_LNG = 39.826206;
-      const SMOOTHING_ALPHA = 0.3; // Circular EMA factor (higher = snappier, lower = smoother)
+      const SMOOTHING_ALPHA = 0.75; // Keep the compass responsive while filtering sensor jitter
       const ALIGN_ENTER = 3.0; // degrees: enter aligned state
       const ALIGN_EXIT = 6.5; // degrees: exit aligned state (hysteresis)
 
@@ -721,6 +721,7 @@
       let dragInitialHeading = 0;
       let isDragging = false;
       let gotAbsolute = false; // true once a true-north (absolute) sensor event has been seen
+      let sensorSource = null; // prevents relative alpha readings from fighting true-north data
       let sensorStarted = false; // guards against registering the sensor listeners twice
       let renderPending = false; // requestAnimationFrame coalescing
 
@@ -919,27 +920,38 @@
       function handleOrientation(e) {
         if (isDragging) return; // user is rotating the dial by hand
         let heading = null;
+        let source = null;
 
-        // 1) iOS Safari: webkitCompassHeading is already the compass heading of the
-        //    top of the device in degrees clockwise from north.
+        // iOS Safari exposes a calibrated true-north heading. Prefer it whenever
+        // present; it is more reliable than alpha on iPhones and iPads.
         if (
           typeof e.webkitCompassHeading === "number" &&
-          !isNaN(e.webkitCompassHeading)
+          Number.isFinite(e.webkitCompassHeading)
         ) {
-          heading = e.webkitCompassHeading;
-        }
-        // 2) Android / standard: `alpha` is the rotation about the vertical axis.
-        else if (typeof e.alpha === "number" && !isNaN(e.alpha)) {
-          const isAbsolute = e.absolute === true;
-          if (isAbsolute) gotAbsolute = true;
-
-          // Once a true-north (absolute) stream exists, IGNORE the relative one.
-          // Mixing the two is exactly what made the needle jump randomly.
-          if (isAbsolute || !gotAbsolute) {
-            // Device top heading = 360 - alpha. This holds even when the phone is
-            // tilted, because gamma never moves the top edge off the vertical.
-            heading = (360 - e.alpha) % 360;
+          heading = ((e.webkitCompassHeading % 360) + 360) % 360;
+          source = "webkit";
+        } else if (typeof e.alpha === "number" && Number.isFinite(e.alpha)) {
+          // Some browsers do not set event.absolute consistently, so the event
+          // type is also checked. `alpha` increases clockwise, hence 360-alpha.
+          const isAbsolute = e.type === "deviceorientationabsolute" || e.absolute === true;
+          if (isAbsolute) {
+            gotAbsolute = true;
+            source = "absolute";
+          } else if (!gotAbsolute) {
+            source = "relative";
           }
+          if (source) heading = (360 - e.alpha + 360) % 360;
+        }
+
+        // Do not let a relative stream overwrite a calibrated stream. A WebKit
+        // heading is explicitly allowed because it is itself a calibrated heading.
+        if (source === "relative" && (gotAbsolute || sensorSource === "webkit")) return;
+
+        if (source === "webkit") gotAbsolute = false;
+        if (source && source !== sensorSource) {
+          // Avoid carrying a stale filtered value across sensor implementations.
+          smoothedHeading = null;
+          sensorSource = source;
         }
 
         // Gentle "keep it flat" hint when the phone is tilted a lot.
